@@ -1,0 +1,17 @@
+{
+  "cochesve_one": {
+    "openai_project_key": "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",
+    "pinecone_key": "pcsk_3BTFi3_4Foe2jtQSQSLvqEgQ59vDAURW4Us8pj2ccQ7m8DpWmThKhKUQ4PcDQ7KkmGwDY8",
+    "index": "coches-sap2",
+    "namespace": "coches",
+    "assistant_id": "materials-sap-assistant-cars",
+    "assistant_id_stats":"statistics-analyst-sap"
+  },
+  "materials-sap": {
+    "openai_project_key": "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",
+    "pinecone_key": "pcsk_3BTFi3_4Foe2jtQSQSLvqEgQ59vDAURW4Us8pj2ccQ7m8DpWmThKhKUQ4PcDQ7KkmGwDY8",
+    "index": "materials-sap",
+    "namespace": "materiales",
+    "assistant_id": "materials-sap-assistant3"
+  }
+}

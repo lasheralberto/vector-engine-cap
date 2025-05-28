@@ -1,0 +1,30 @@
+{
+  "name": "vector-engine-cap",
+  "version": "1.0.0",
+  "description": "CAP Project for Pinecone Integration.",
+  "repository": "<Add your repository here>",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@pinecone-database/pinecone": "^6.0.1",
+    "@sap/cds": "^8.9.4",
+    "express": "^4.21.2",
+    "openai": "^4.103.0",
+    "@sap/xssec": "^4"
+  },
+  "devDependencies": {
+    "@cap-js/cds-types": "^0.10.0",
+    "@sap/cds-dk": "^8"
+  },
+  "scripts": {
+    "start": "cds-serve"
+  },
+  "cds": {
+    "requires": {
+      "[production]": {
+        "auth": "xsuaa"
+      }
+    }
+  }
+}
