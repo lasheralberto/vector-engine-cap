@@ -15,7 +15,7 @@ export default cds.service.impl(async function () {
             }
 
             // Obtener query y metadata del body
-            const { query } = req.data;
+            const { query, topk } = req.data;
  
 
             // Cargar configuración
@@ -44,7 +44,8 @@ export default cds.service.impl(async function () {
                 namespace,
                 query,
                 assistantName,
-                methodQueryCh
+                methodQueryCh, 
+                topk
             });
 
             // Formatear resultados

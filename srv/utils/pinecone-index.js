@@ -10,7 +10,8 @@ class PineconeIndex {
         query,
         assistantName,
         filter = {},
-        methodQueryCh
+        methodQueryCh, 
+        topk
     }) {
         let queryDict = null;
         let queryMetadataString = null;
@@ -24,7 +25,8 @@ class PineconeIndex {
         }
 
         // Extraer parámetros de consulta
-        const { sortKey, sortOrder, limit, cleanFilter } = this._extractQueryParams(queryDict, filter);
+        console.log("le vamos a poner topk", topk);
+        const { sortKey, sortOrder, limit, cleanFilter } = this._extractQueryParams(queryDict, filter, topk);
 
         // Generar embedding
         const embedVector = await this._generateEmbedding(pc, query);
@@ -33,10 +35,12 @@ class PineconeIndex {
         const results = await this._executeQuery(pc.index(indexName).namespace(namespace), {
             vector: embedVector,
             filter: cleanFilter,
-            limit
+            limit: limit,
+            topk: topk
         });
 
         // Aplicar ordenamiento si es necesario
+        console.log("Ordenación solicitada:", sortKey, sortOrder);
         if (sortKey && sortOrder && results.matches.length > 0) {
             this._sortResults(results.matches, sortKey, sortOrder);
         }
@@ -56,7 +60,7 @@ class PineconeIndex {
         }
     }
 
-    static _extractQueryParams(queryDict, defaultFilter) {
+    static _extractQueryParams(queryDict, defaultFilter, topk) {
         if (!queryDict || queryDict === "null") {
             return {
                 sortKey: null,
@@ -71,7 +75,7 @@ class PineconeIndex {
         return {
             sortKey: sort || null,
             sortOrder: order ?? 1,
-            limit: lim || 5,
+            limit: lim || topk,
             cleanFilter: Object.keys(cleanFilter).length > 0 ? cleanFilter : defaultFilter
         };
     }
@@ -89,13 +93,15 @@ class PineconeIndex {
         return embedResponse.data[0].values;
     }
 
-    static async _executeQuery(index, { vector, filter, limit }) {
+    static async _executeQuery(index, { vector, filter, limit, topk }) {
         const baseQuery = {
             vector,
-            topK: limit,
+            topK: limit || topk || 5,
             includeValues: false,
             includeMetadata: true
         };
+
+        console.log("Base query:", baseQuery);
 
         // Agregar filtro solo si tiene contenido
         if (Object.keys(filter).length > 0) {
@@ -117,11 +123,14 @@ class PineconeIndex {
         matches.sort((a, b) => {
             const valA = a.metadata?.[sortKey];
             const valB = b.metadata?.[sortKey];
-
+            
+            
             if (valA < valB) return sortOrder;
+
             if (valA > valB) return -sortOrder;
             return 0;
         });
+         
     }
 
 }

@@ -12,6 +12,6 @@ service VectorSearchService @(requires: 'any'){
   }
   
   @HTTP.POST
-  action performVectorSearch(query: String ) returns SearchResults;
+  action performVectorSearch(query: String, topk: Integer ) returns SearchResults;
 
 }
