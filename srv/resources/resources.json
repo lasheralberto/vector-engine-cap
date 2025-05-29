@@ -5,7 +5,7 @@
     "index": "coches-sap2",
     "namespace": "coches",
     "assistant_id": "materials-sap-assistant-cars",
-    "assistant_id_stats":"statistics-analyst-sap"
+    "assistant_id_stats": "statistics-analyst-sap"
   },
   "materials-sap": {
     "openai_project_key": "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",
@@ -13,5 +13,12 @@
     "index": "materials-sap",
     "namespace": "materiales",
     "assistant_id": "materials-sap-assistant3"
+  },
+  "coches-demo-cuviv": {
+    "openai_project_key": "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",
+    "pinecone_key": "pcsk_3BTFi3_4Foe2jtQSQSLvqEgQ59vDAURW4Us8pj2ccQ7m8DpWmThKhKUQ4PcDQ7KkmGwDY8",
+    "index": "coches-sap2",
+    "namespace": "coches",
+    "assistant_id": "sap-assistant-cars"
   }
 }
