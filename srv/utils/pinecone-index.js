@@ -29,14 +29,14 @@ class PineconeIndex {
         const { sortKey, sortOrder, limit, cleanFilter } = this._extractQueryParams(queryDict, filter, topk);
 
         // Generar embedding
-        const embedVector = await this._generateEmbedding(pc, query);
+        const embedVector = await this._generateEmbedding(pc, cleanFilter.rewritten_query || query);
 
         // Ejecutar consulta en Pinecone
         const results = await this._executeQuery(pc.index(indexName).namespace(namespace), {
             vector: embedVector,
-            filter: cleanFilter,
-            limit: limit,
-            topk: topk
+            filter: cleanFilter.filters,
+            limit: cleanFilter.limit || limit,
+            topk: cleanFilter.topk || topk
         });
 
         // Aplicar ordenamiento si es necesario
@@ -61,6 +61,7 @@ class PineconeIndex {
     }
 
     static _extractQueryParams(queryDict, defaultFilter, topk) {
+
         if (!queryDict || queryDict === "null") {
             return {
                 sortKey: null,
@@ -71,6 +72,8 @@ class PineconeIndex {
         }
 
         const { sort, order, limit: lim, ...cleanFilter } = queryDict;
+        console.log("Filtros sin procesar:", queryDict);
+        console.log("Parámetros de consulta extraídos:", { sort, order, lim, cleanFilter });
 
         return {
             sortKey: sort || null,
@@ -101,10 +104,8 @@ class PineconeIndex {
             includeMetadata: true
         };
 
-        console.log("Base query:", baseQuery);
-
         // Agregar filtro solo si tiene contenido
-        if (Object.keys(filter).length > 0) {
+        if (filter !=null && Object.keys(filter).length > 0) {
             baseQuery.filter = filter;
         }
 

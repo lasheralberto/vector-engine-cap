@@ -1,7 +1,12 @@
 @OData.publish: true
 service VectorSearchService @(requires: 'any'){
 
- 
+  type SearchParams {
+    query: String;
+    topk: Integer;
+}
+
+
   type SearchResults {
       key Id: UUID;
       idConfig: String(100);
@@ -12,6 +17,6 @@ service VectorSearchService @(requires: 'any'){
   }
   
   @HTTP.POST
-  action performVectorSearch(query: String, topk: Integer ) returns SearchResults;
+  action performVectorSearch(params: SearchParams) returns SearchResults;
 
 }

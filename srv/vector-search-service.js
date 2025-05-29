@@ -15,8 +15,12 @@ export default cds.service.impl(async function () {
             }
 
             // Obtener query y metadata del body
-            const { query, topk } = req.data;
+            //Enviaremos desde el backend un JSON con la query y el topk
+            console.log("Request data:", req.data);
  
+            const { query , topk } = req.data.params;
+            console.log("Query:", query);
+            console.log("TopK:", topk);
 
             // Cargar configuración
             const config = await VectorEngineUtils.getConfiguration(configId);
@@ -47,6 +51,9 @@ export default cds.service.impl(async function () {
                 methodQueryCh, 
                 topk
             });
+
+            console.log("Resultados de la búsqueda:", results);
+            console.log("Metadata de la consulta:", queryMetadataString);
 
             // Formatear resultados
             const formattedResults = results.matches.map(match => ({
