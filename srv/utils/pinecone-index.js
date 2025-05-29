@@ -10,7 +10,7 @@ class PineconeIndex {
         query,
         assistantName,
         filter = {},
-        methodQueryCh, 
+        methodQueryCh,
         topk
     }) {
         let queryDict = null;
@@ -25,22 +25,33 @@ class PineconeIndex {
         }
 
         // Extraer parámetros de consulta
-        console.log("le vamos a poner topk", topk);
+
         const { sortKey, sortOrder, limit, cleanFilter } = this._extractQueryParams(queryDict, filter, topk);
 
         // Generar embedding
-        const embedVector = await this._generateEmbedding(pc, cleanFilter.rewritten_query || query);
+        const embedVector = await this._generateEmbedding(pc, cleanFilter.rewrittenQuery || query);
 
-        // Ejecutar consulta en Pinecone
-        const results = await this._executeQuery(pc.index(indexName).namespace(namespace), {
+        const sumLimits = cleanFilter.limits?.reduce((acc, val) => acc + val, 0);
+
+
+        const queryOptions = {
             vector: embedVector,
             filter: cleanFilter.filters,
-            limit: cleanFilter.limit || limit,
-            topk: cleanFilter.topk || topk
-        });
+            limit: sumLimits ?? topk,
+            topk: sumLimits ?? topk
+        };
+
+        console.log("Parámetros de consulta generados definitivos:", queryOptions);
+
+        // Ejecutar consulta en Pinecone sin sorts (No los admite Pinecone directamente)
+        const results = await this._executeQuery(
+            pc.index(indexName).namespace(namespace),
+            queryOptions
+        );
 
         // Aplicar ordenamiento si es necesario
-        console.log("Ordenación solicitada:", sortKey, sortOrder);
+        console.log("Claves de ordenamiento:", sortKey);
+        console.log("Orden de ordenamiento:", sortOrder);
         if (sortKey && sortOrder && results.matches.length > 0) {
             this._sortResults(results.matches, sortKey, sortOrder);
         }
@@ -72,13 +83,28 @@ class PineconeIndex {
         }
 
         const { sort, order, limit: lim, ...cleanFilter } = queryDict;
-        console.log("Filtros sin procesar:", queryDict);
-        console.log("Parámetros de consulta extraídos:", { sort, order, lim, cleanFilter });
+
+        let sortKeys = null;
+        let sortOrders = null;
+
+        //Manejar caso de sorts como array o como objeto
+        if (Array.isArray(cleanFilter.sorts)) {
+            if (cleanFilter.sorts.length > 0) {
+                sortKeys = cleanFilter.sorts.map(s => s.field);
+                sortOrders = cleanFilter.sorts.map(s => parseInt(s.order) || 1);
+            }
+        } else if (cleanFilter.sorts && typeof cleanFilter.sorts === 'object') {
+            // Caso de un solo objeto
+            sortKeys = [cleanFilter.sorts.field];
+            sortOrders = [parseInt(cleanFilter.sorts.order) || 1];
+        }
+
+        const sumLimits = cleanFilter.limits?.reduce((acc, val) => acc + val, 0);
 
         return {
-            sortKey: sort || null,
-            sortOrder: order ?? 1,
-            limit: lim || topk,
+            sortKey: sortKeys || sort || null,
+            sortOrder: sortOrders || order || 1,
+            limit: sumLimits ?? topk,
             cleanFilter: Object.keys(cleanFilter).length > 0 ? cleanFilter : defaultFilter
         };
     }
@@ -105,7 +131,7 @@ class PineconeIndex {
         };
 
         // Agregar filtro solo si tiene contenido
-        if (filter !=null && Object.keys(filter).length > 0) {
+        if (filter != null && Object.keys(filter).length > 0) {
             baseQuery.filter = filter;
         }
 
@@ -120,19 +146,23 @@ class PineconeIndex {
         return results;
     }
 
-    static _sortResults(matches, sortKey, sortOrder) {
+    static _sortResults(matches, sortKeys, sortOrders) {
         matches.sort((a, b) => {
-            const valA = a.metadata?.[sortKey];
-            const valB = b.metadata?.[sortKey];
-            
-            
-            if (valA < valB) return sortOrder;
+            for (let i = 0; i < sortKeys.length; i++) {
+                const key = sortKeys[i];
+                const order = sortOrders[i] || 1;
 
-            if (valA > valB) return -sortOrder;
-            return 0;
+                const valA = a.metadata?.[key];
+                const valB = b.metadata?.[key];
+
+                if (valA < valB) return order;
+                if (valA > valB) return -order;
+                // si son iguales, sigue al siguiente criterio
+            }
+            return 0; // todos iguales
         });
-         
     }
+
 
 }
 

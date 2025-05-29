@@ -4,8 +4,7 @@ service VectorSearchService @(requires: 'any'){
   type SearchParams {
     query: String;
     topk: Integer;
-}
-
+  }
 
   type SearchResults {
       key Id: UUID;
