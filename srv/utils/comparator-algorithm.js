@@ -1,12 +1,12 @@
 /**
- * Realiza la comparación de registros con columnas dinámicas
+ * Realiza la comparación de registros con columnas dinámicas incluyendo coordenadas
  * @param {Array} records - Array de registros a comparar
  * @param {Array} columnsToCompare - Array de nombres de columnas a comparar
  * @param {Object} options - Opciones adicionales para la comparación
- * @returns {Object} Resultado de la comparación con colores
+ * @returns {Object} Resultado de la comparación con colores y coordenadas
  */
 
-export   class ComparatorAlgorithm {
+export class ComparatorAlgorithm {
     performComparison(records, columnsToCompare, options = {}) {
         if (records.length === 0) {
             return {
@@ -17,15 +17,23 @@ export   class ComparatorAlgorithm {
         }
 
         // Validar que todas las columnas especificadas existen en los registros
-        const availableColumns = Object.keys(records[0]);
-        const validColumns = columnsToCompare.filter(col => {
-            const exists = availableColumns.includes(col);
-            if (!exists) {
-                console.warn(`Columna '${col}' no encontrada en los registros. Columnas disponibles: ${availableColumns.join(', ')}`);
-            }
-            return exists;
-        });
+        const availableColumns = Object.keys(records[0].metadata);
+        
+        let validColumns = [];
 
+        if (columnsToCompare.length === 0) {
+            columnsToCompare = availableColumns; // Si no se especifican columnas, comparar todas
+            validColumns = availableColumns;
+        } else {
+
+            for (const col of columnsToCompare) {
+                if (availableColumns.includes(col)) {
+                    validColumns.push(col);
+                }
+            }
+        }
+
+ 
         if (validColumns.length === 0) {
             return {
                 comparedRecords: records,
@@ -37,18 +45,25 @@ export   class ComparatorAlgorithm {
 
         // Configuración de opciones
         const config = {
-            predominantThreshold: options.predominantThreshold || 0.5, // 50% por defecto
-            ignoreNullValues: options.ignoreNullValues !== false, // true por defecto
-            caseSensitive: options.caseSensitive !== false, // true por defecto
+            predominantThreshold: options.predominantThreshold || 0.5,
+            ignoreNullValues: options.ignoreNullValues !== false,
+            caseSensitive: options.caseSensitive !== false,
             ...options
         };
+
+        // Crear mapeo de columnas a índices X
+        const columnToXIndex = {};
+        validColumns.forEach((column, index) => {
+            columnToXIndex[column] = index;
+        });
 
         // Analizar cada columna especificada
         const columnAnalysis = {};
         const colorMapping = this.generateColorMapping();
+        const coordinateMatrix = {}; // Estructura: coordinateMatrix[y][x] = { value, color, metadata }
 
         validColumns.forEach(column => {
-            let values = records.map(record => record[column]);
+            let values = records.map(record => record.metadata[column]);
 
             // Filtrar valores nulos si está configurado
             if (config.ignoreNullValues) {
@@ -70,22 +85,22 @@ export   class ComparatorAlgorithm {
                 totalRecords: records.length,
                 validValues: values.length,
                 uniqueValues: uniqueValues.length,
-                shouldHighlight: uniqueValues.length < values.length && values.length > 1, // Hay valores repetidos
+                shouldHighlight: uniqueValues.length < values.length && values.length > 1,
                 valueFrequency: valueFrequency,
                 predominantValue: this.getPredominantValue(normalizedValues),
                 hasPredominantValue: this.hasPredominantValue(valueFrequency, config.predominantThreshold),
-                originalValues: [...new Set(values)] // Valores originales sin normalizar
+                originalValues: [...new Set(values)]
             };
         });
 
-        // Crear registros con información de colores
-        const comparedRecords = records.map((record, index) => {
+        // Crear registros con información de colores (manteniendo estructura original)
+        const comparedRecords = records.map((record, rowIndex) => {
             const recordWithColors = {
                 ...record,
-                _rowIndex: index,
+                _rowIndex: rowIndex,
                 _columnColors: {},
                 _comparisonMetadata: {
-                    recordId: record.id || record.ID || `record_${index}`,
+                    recordId: record.id || record.ID || `record_${rowIndex}`,
                     timestamp: new Date().toISOString()
                 }
             };
@@ -94,7 +109,7 @@ export   class ComparatorAlgorithm {
                 const currentValue = record[column];
                 const analysis = columnAnalysis[column];
 
-                // Solo procesar si hay algo que marcar
+                // Solo procesar colores si hay algo que marcar
                 if (!analysis.shouldHighlight || !currentValue) {
                     return;
                 }
@@ -131,6 +146,12 @@ export   class ComparatorAlgorithm {
             return recordWithColors;
         });
 
+        // Crear análisis de coordenadas por separado
+        const coordinates = this.createCoordinateAnalysis(records, validColumns, columnToXIndex, columnAnalysis, colorMapping, config);
+
+        // Crear matriz simplificada para visualización
+        const visualMatrix = this.createVisualMatrix(coordinates.coordinateMatrix, records.length, validColumns.length);
+
         return {
             comparedRecords,
             columnAnalysis,
@@ -146,8 +167,154 @@ export   class ComparatorAlgorithm {
                     columnAnalysis[col] && columnAnalysis[col].shouldHighlight
                 ),
                 availableColumns: availableColumns
+            },
+            coordinates: {
+                coordinateMatrix: coordinates.coordinateMatrix,
+                visualMatrix: visualMatrix,
+                matrixDimensions: {
+                    rows: records.length,
+                    columns: validColumns.length,
+                    columnNames: validColumns,
+                    columnMapping: columnToXIndex
+                }
             }
         };
+    }
+
+    /**
+     * Crea el análisis de coordenadas por separado
+     */
+    createCoordinateAnalysis(records, validColumns, columnToXIndex, columnAnalysis, colorMapping, config) {
+        const coordinateMatrix = {};
+
+        records.forEach((record, rowIndex) => {
+            // Inicializar fila en la matriz de coordenadas si no existe
+            if (!coordinateMatrix[rowIndex]) {
+                coordinateMatrix[rowIndex] = {};
+            }
+
+            validColumns.forEach(column => {
+                const currentValue = record.metadata[column];
+                 
+                const analysis = columnAnalysis[column];
+                const xIndex = columnToXIndex[column];
+
+                // Agregar a la matriz de coordenadas (SIEMPRE agregar la celda)
+                coordinateMatrix[rowIndex][xIndex] = {
+                    value: currentValue,
+                    //originalValue: currentValue,
+                    column: column,
+                    x: xIndex,
+                    y: rowIndex,
+                    recordId: record.id || record.ID || `record_${rowIndex}`,
+                    color: null,
+                    metadata: null
+                };
+
+                // Solo procesar colores si hay algo que marcar
+                if (analysis && analysis.shouldHighlight && currentValue !== null && currentValue !== undefined) {
+                    const normalizedCurrentValue = !config.caseSensitive && typeof currentValue === 'string'
+                        ? currentValue.toLowerCase()
+                        : currentValue;
+
+                    let colorInfo = null;
+
+                    // Escenario 1: Hay valor predominante - marcar toda la columna
+                    if (analysis.hasPredominantValue) {
+                        colorInfo = {
+                            backgroundColor: colorMapping.predominant,
+                            textColor: '#2F4F2F',
+                            reason: `Valor predominante: ${analysis.predominantValue}`,
+                            scenario: 1,
+                            frequency: analysis.valueFrequency[normalizedCurrentValue] || 0,
+                            percentage: Math.round(((analysis.valueFrequency[normalizedCurrentValue] || 0) / analysis.validValues) * 100)
+                        };
+                    } else {
+                        // Escenario 2: Marcar solo las celdas con valores que se repiten
+                        if (analysis.valueFrequency[normalizedCurrentValue] > 1) {
+                            colorInfo = {
+                                backgroundColor: this.getColorForValue(normalizedCurrentValue, colorMapping),
+                                textColor: '#333333',
+                                reason: `Valor repetido: ${currentValue} (aparece ${analysis.valueFrequency[normalizedCurrentValue]} veces)`,
+                                scenario: 2,
+                                frequency: analysis.valueFrequency[normalizedCurrentValue],
+                                percentage: Math.round((analysis.valueFrequency[normalizedCurrentValue] / analysis.validValues) * 100)
+                            };
+                        }
+                    }
+
+                    if (colorInfo) {
+                        // Actualizar la matriz de coordenadas con la información de color
+                        coordinateMatrix[rowIndex][xIndex].color = colorInfo.backgroundColor;
+                        coordinateMatrix[rowIndex][xIndex].metadata = colorInfo;
+                    }
+                }
+            });
+        });
+ 
+        return { coordinateMatrix };
+    }
+
+    /**
+     * Crea una matriz visual simplificada para renderizado
+     */
+    createVisualMatrix(coordinateMatrix, rows, cols) {
+        const matrix = [];
+
+ 
+        // Iterar sobre las filas y columnas para construir la matriz visual
+
+        for (let y = 0; y < rows; y++) {
+            const row = [];
+            for (let x = 0; x < cols; x++) {
+                const cell = coordinateMatrix[y] && coordinateMatrix[y][x];
+                row.push({
+                    x,
+                    y,
+                    value: cell ? cell.value : null,
+                    color: cell ? cell.color : null,
+                    hasHighlight: cell ? !!cell.color : false,
+                    column: cell ? cell.column : null
+                });
+            }
+            matrix.push(row);
+        }
+
+        return matrix;
+    }
+
+    /**
+     * Obtiene información específica de una coordenada
+     */
+    getCellInfo(coordinateMatrix, x, y) {
+        if (coordinateMatrix[y] && coordinateMatrix[y][x]) {
+            return coordinateMatrix[y][x];
+        }
+        return null;
+    }
+
+    /**
+     * Obtiene todas las celdas con un valor específico
+     */
+    getCellsWithValue(coordinateMatrix, value, caseSensitive = true) {
+        const cells = [];
+        const searchValue = caseSensitive ? value : value.toLowerCase();
+
+        Object.keys(coordinateMatrix).forEach(y => {
+            Object.keys(coordinateMatrix[y]).forEach(x => {
+                const cell = coordinateMatrix[y][x];
+                const cellValue = caseSensitive ? cell.value : (cell.value || '').toLowerCase();
+
+                if (cellValue === searchValue) {
+                    cells.push({
+                        ...cell,
+                        coordinates: { x: parseInt(x), y: parseInt(y) }
+                    });
+                }
+            });
+        });
+
+        return cells;
     }
 
     /**

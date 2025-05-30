@@ -3,12 +3,12 @@ export default cds.service.impl(async function () {
     this.on('performComparisonService', async (req) => {
         let dataDeserialized = null;
         const { recordsPayload } = req.data;
-        console.log("Payload recibido:", recordsPayload);
+ 
 
         // Validar y deserializar datos
         try {
             dataDeserialized = JSON.parse(recordsPayload);
-            console.log("Datos deserializados:", dataDeserialized);
+          
         } catch (err) {
             req.error(400, 'JSON inválido en el query');
             return;
@@ -27,8 +27,7 @@ export default cds.service.impl(async function () {
 
         // Validar que el parámetro de columnas esté presente
         if (!dataDeserialized.columnsToCompare || !Array.isArray(dataDeserialized.columnsToCompare)) {
-            req.error(400, 'Se requiere un array de columnsToCompare especificando qué columnas comparar');
-            return;
+            dataDeserialized.columnsToCompare = [];
         }
 
         try {
