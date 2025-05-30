@@ -33,15 +33,17 @@ class PineconeIndex {
 
         const sumLimits = cleanFilter.limits?.reduce((acc, val) => acc + val, 0);
 
+ 
 
+        
         const queryOptions = {
             vector: embedVector,
-            filter: cleanFilter.filters,
+            filter: cleanFilter.filters != null ? cleanFilter.filters : null,
             limit: sumLimits ?? topk,
             topk: sumLimits ?? topk
         };
 
-        console.log("Parámetros de consulta generados definitivos:", queryOptions);
+   
 
         // Ejecutar consulta en Pinecone sin sorts (No los admite Pinecone directamente)
         let {results, additionalInfo} = await this._executeQuery(
@@ -119,9 +121,10 @@ class PineconeIndex {
     static async _generateEmbedding(pc, query) {
         const userQuery = [query];
         const queryParameters = { inputType: "query" };
-
+ 
         const embedResponse = await pc.inference.embed(
             "llama-text-embed-v2",
+            //"text-embedding-ada-002",
             userQuery,
             queryParameters
         );
@@ -147,7 +150,7 @@ class PineconeIndex {
 
         let results = await index.query(baseQuery);
 
-        console.log("Resultados obtenidos:", results);
+ 
 
         // Si no hay resultados con filtro, intentar sin filtro
         if (results.matches.length === 0 ) {
