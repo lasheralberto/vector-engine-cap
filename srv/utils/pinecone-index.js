@@ -44,19 +44,26 @@ class PineconeIndex {
         console.log("Parámetros de consulta generados definitivos:", queryOptions);
 
         // Ejecutar consulta en Pinecone sin sorts (No los admite Pinecone directamente)
-        const results = await this._executeQuery(
+        let {results, additionalInfo} = await this._executeQuery(
             pc.index(indexName).namespace(namespace),
             queryOptions
         );
 
         // Aplicar ordenamiento si es necesario
-        console.log("Claves de ordenamiento:", sortKey);
-        console.log("Orden de ordenamiento:", sortOrder);
         if (sortKey && sortOrder && results.matches.length > 0) {
             this._sortResults(results.matches, sortKey, sortOrder);
         }
 
-        return { results, queryMetadataString };
+
+        if(queryDict.filters == null || queryDict.filters === "null") {
+            additionalInfo = "queryWithoutFilters";
+        } else if (queryDict.sorts.length === 0 && queryDict.filters === null) {
+            additionalInfo = "queryWithoutFilters";
+        }
+
+ 
+
+        return { results, queryMetadataString, additionalInfo };
     }
 
     // Métodos auxiliares privados
@@ -123,11 +130,14 @@ class PineconeIndex {
     }
 
     static async _executeQuery(index, { vector, filter, limit, topk }) {
+        let additionalInfo = "queryWithFilters";
+
         const baseQuery = {
             vector,
             topK: limit || topk || 5,
             includeValues: false,
             includeMetadata: true
+            
         };
 
         // Agregar filtro solo si tiene contenido
@@ -137,13 +147,18 @@ class PineconeIndex {
 
         let results = await index.query(baseQuery);
 
-        // Si no hay resultados con filtro, intentar sin filtro
-        if (results.matches.length === 0 && baseQuery.filter) {
-            delete baseQuery.filter;
-            results = await index.query(baseQuery);
-        }
+        console.log("Resultados obtenidos:", results);
 
-        return results;
+        // Si no hay resultados con filtro, intentar sin filtro
+        if (results.matches.length === 0 ) {
+            delete baseQuery.filter;
+            additionalInfo = "queryWithoutFilters";
+            results = await index.query(baseQuery);
+        } else if (baseQuery.filter == null ) {
+            additionalInfo = "queryWithoutFilters";
+        } 
+
+        return {"results": results, "additionalInfo": additionalInfo };
     }
 
     static _sortResults(matches, sortKeys, sortOrders) {

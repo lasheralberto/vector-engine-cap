@@ -15,9 +15,6 @@ export default cds.service.impl(async function () {
             }
 
             // Obtener query y metadata del body
-            //Enviaremos desde el backend un JSON con la query y el topk
-            console.log("Request data:", req.data);
- 
             const { query , topk } = req.data.params;
             console.log("Query:", query);
             console.log("TopK:", topk);
@@ -41,7 +38,7 @@ export default cds.service.impl(async function () {
             const openaiClient = new OpenAI({ apiKey: openaiKey });
 
             // Ejecutar búsqueda vectorial con el nuevo parámetro metadata
-            const { results, queryMetadataString } = await PineconeIndex.query({
+            const { results, queryMetadataString, additionalInfo } = await PineconeIndex.query({
                 pc,
                 openaiClient,
                 indexName,
@@ -51,9 +48,6 @@ export default cds.service.impl(async function () {
                 methodQueryCh, 
                 topk
             });
-
-            console.log("Resultados de la búsqueda:", results);
-            console.log("Metadata de la consulta:", queryMetadataString);
 
             // Formatear resultados
             const formattedResults = results.matches.map(match => ({
@@ -66,7 +60,8 @@ export default cds.service.impl(async function () {
                 idConfig: configId,
                 query: query,
                 filters: queryMetadataString,
-                results: formattedResults
+                results: formattedResults, 
+                additionalInfo: additionalInfo || "No hay información adicional disponible",
             };
 
             return response;

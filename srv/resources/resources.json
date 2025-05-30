@@ -20,5 +20,12 @@
     "index": "coches-sap2",
     "namespace": "coches",
     "assistant_id": "sap-assistant-cars"
+  },
+    "ausape-supermarkt": {
+    "openai_project_key": "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",
+    "pinecone_key": "pcsk_3v8qTc_9TGPpCM6mRmQ6aweg2VPmeVg9et9N7GB4VZftz52yFo732DX4nor2txcDYpn64J",
+    "index": "ausape-products-index",
+    "namespace": "ausape-products",
+    "assistant_id": "ausape-supermarkt-assistant-v2"
   }
 }
