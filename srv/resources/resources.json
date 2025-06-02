@@ -1,0 +1,31 @@
+{
+  "cochesve_one": {
+    "openai_project_key": "",
+    "pinecone_key": "",
+    "index": "coches-sap2",
+    "namespace": "coches",
+    "assistant_id": "materials-sap-assistant-cars",
+    "assistant_id_stats": "statistics-analyst-sap"
+  },
+  "materials-sap": {
+    "openai_project_key": " ",
+    "pinecone_key": " ",
+    "index": "materials-sap",
+    "namespace": "materiales",
+    "assistant_id": "materials-sap-assistant3"
+  },
+  "coches-demo-cuviv": {
+    "openai_project_key": " ",
+    "pinecone_key": " ",
+    "index": "coches-sap2",
+    "namespace": "coches",
+    "assistant_id": "sap-assistant-cars"
+  },
+    "ausape-supermarkt": {
+    "openai_project_key": " ",
+    "pinecone_key": " ",
+    "index": "ausape-products-index",
+    "namespace": "ausape-products",
+    "assistant_id": "ausape-supermarkt-assistant-v2"
+  }
+}
